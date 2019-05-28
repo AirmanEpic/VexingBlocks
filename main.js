@@ -19,6 +19,13 @@ layers = [];
 selected_layer = 0;
 res = 32;
 
+tool = 0;
+colors = []
+colors[0] = "gray";
+colors[1] = "white";
+paint_color = 1;
+
+
 $("body").mousemove(function(e) {
 	    mpos.x = e.pageX
 	   	mpos.y = e.pageY
@@ -59,7 +66,15 @@ var main=function(){
 	});
 
 	$('.newlayerbut').click(function(){
-		layers.push({grid:[],name:"Layer "+layers.length,settings:{}})
+		layers.push({grid:[],name:"Layer "+layers.length,settings:{},visible:true,selected:false})
+		for (var xx=0; xx<res; xx++)
+		{
+			layers[layers.length-1].grid[xx]=[]
+			for (var yy=0; yy<res; yy++)
+			{
+				layers[layers.length-1].grid[xx][yy]=-1;
+			}
+		}
 
 		render_layer_UI();
 	})
@@ -76,14 +91,23 @@ function render_layer_UI(){
 	for (var i=0; i<layers.length; i++)
 	{
 		tl = layers[i];
-		str+= "<div class='layer' id="+i+"><h3>"+tl.name+"</h3><div class='tinybut deletebut' style='margin-left:auto'><span class='icon-bin'></span></div> <div class='tinybut movedownbut'><span class='icon-menu3'></span></div><div class='tinybut moveupbut'><span class='icon-menu4'></span></div></div>"
+
+		selstr = ''
+		if (tl.selected)
+			selstr = 'selected'
+
+		str+= "<div class='layer "+selstr+"' id="+i+"><h3>"+tl.name+"</h3><div class='tinybut deletebut' style='margin-left:auto'><span class='icon-bin'></span></div> <div class='tinybut movedownbut'><span class='icon-menu3'></span></div><div class='tinybut moveupbut'><span class='icon-menu4'></span></div></div>"
 	}
 
 	$('.layerbox').html(str);
 
 	$('.layer').click(function(){
 		tgt = $(this).attr("id");
-		selected_layer = parseInt(tgt);
+		for (var i=0; i<layers.length; i++)
+		{
+			layers[i].selected=false;
+		}
+		layers[tgt].selected=true;
 
 		$('.layer').removeClass("selected")
 		$(this).addClass("selected")
@@ -104,8 +128,8 @@ function loop(){
 		drag.start.x=mpos.x;
 		drag.start.y=mpos.y;
 
-		drag.pos_start.x=cur_pos.x;
-		drag.pos_start.y=cur_pos.y;
+		drag.pos_start.x=mpos_paint.x;
+		drag.pos_start.y=mpos_paint.y;
 
 		clicked_lm=2;
 	}
@@ -115,8 +139,19 @@ function loop(){
 		if (drag.mode==1)
 		{
 
-			new_pos_x = (mpos.x-drag.start.x)/(Math.pow(cur_zoom,.2))+drag.pos_start.x;
-			new_pos_y = (mpos.y-drag.start.y)/(Math.pow(cur_zoom,.2))+drag.pos_start.y;
+			new_pos_x = (mpos.x-drag.start.x)
+			new_pos_y = (mpos.y-drag.start.y)
+		}
+
+		//paint
+		for (var l=0; l<layers.length; l++)
+		{
+			tl = layers[l];
+			if (layers[l].selected)
+			{
+				if (tl.grid[mouse_cell.x] && tl.grid[mouse_cell.x][mouse_cell.y])
+				tl.grid[mouse_cell.x][mouse_cell.y]=paint_color;
+			}
 		}
 	}
 	
@@ -125,12 +160,43 @@ function loop(){
 		drag_mode=0;
 	}
 
+	//mouse cell
+		mpos_paint = {x:mpos.x-$('#canvas-2d').offset().left-(twod_canvas.width/(res*2)),y:mpos.y-$('#canvas-2d').offset().top-(twod_canvas.width/(res*2))}
+		mouse_cell = {x:Math.round(mpos_paint.x/(twod_canvas.width/res)),y:Math.round(mpos_paint.y/(twod_canvas.width/res))}
+
 	ctx_paint.clearRect(0,0,twod_canvas.width,twod_canvas.height);
 	ctx_paint.fillStyle="black";
 	ctx_paint.fillRect(0,0,twod_canvas.width,twod_canvas.height);
 
+	//draw tool
+		ctx_paint.lineWidth=2;
+		ctx_paint.strokeStyle="green";
+		ctx_paint.strokeRect(mouse_cell.x*(twod_canvas.width/res),mouse_cell.y*(twod_canvas.width/res),twod_canvas.width/res,twod_canvas.height/res)
+
+	//draw tiles
+		for (var l=0; l<layers.length; l++)
+		{
+			tl = layers[l];
+			if (layers[l].selected)
+			{
+				for (var xx=0; xx<res; xx++)
+				{
+					for (var yy=0; yy<res; yy++)
+					{
+						if (tl.grid[xx][yy]!=-1)
+						{
+							defn = tl.grid[xx][yy];
+							ctx_paint.fillStyle = colors[defn]
+							ctx_paint.fillRect(xx*(twod_canvas.width/res),yy*(twod_canvas.width/res),(twod_canvas.width/res),(twod_canvas.width/res))
+						}
+					}
+				}
+			}
+		}
+
 	//draw grid
 		ctx_paint.strokeStyle="gray";
+		ctx_paint.lineWidth = 1
 
 		for (var i=0; i<res+1; i++)
 		{
