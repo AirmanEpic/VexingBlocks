@@ -1,0 +1,50 @@
+@font-face {
+  font-family: 'Titlefont';
+  src: url("fonts/Apex New Light.otf") format("woff2"); }
+@font-face {
+  font-family: 'BodyFont';
+  src: url("fonts/Roboto-Thin.ttf") format("woff2"); }
+@font-face {
+  font-family: 'Adam';
+  src: url("fonts/ADAMCGPRO.otf") format("woff2"); }
+h1, h2, h3, h4, h5, h6, p {
+  margin: 0; 
+  color:white;
+  font-family: Titlefont}
+
+body {
+  margin: 0;
+  background-color:rgb(10,10,10);
+  overflow: hidden;
+  display:grid;
+  grid-template-columns: [leftbar] 2fr [middlebar] 4fr [rightbar] 3fr;
+  grid-template-rows:none;
+}
+
+.leftbar{
+  height:100%;
+  display: flex;
+  justify-content: flex-start;
+  flex-direction: column;
+}
+
+.rightbar{
+  display: flex;
+  justify-content: flex-start;
+  flex-direction: column;
+}
+
+.key-segment:first-child{
+  border-left:0px solid gray;
+}
+
+.key-segment{
+  border-left:1px solid gray;
+  border-right:1px solid gray;
+}
+
+.preview-window{
+  margin-top:auto;
+  border-top:1px solid gray;
+
+}
