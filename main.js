@@ -123,6 +123,11 @@ function resizeDiv() {
 	rbar_width = $('.rightbar').width();
 	preview.height = rbar_width;
 	preview.width = rbar_width;
+
+	$('.window').each(function(){
+		w = $(this).parent().width();
+		$(this).css({height:w+"px"})
+	})
 }
 
 

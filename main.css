@@ -12,6 +12,22 @@ h1, h2, h3, h4, h5, h6, p {
   color:white;
   font-family: Titlefont}
 
+.titlebox{
+  border-bottom:1px solid rgb(50,50,50);
+  display: flex;
+}
+
+
+.titlebox h4{
+  margin-left:20px;
+  margin-bottom:2px;
+  border-bottom:1px solid white;
+}
+
+.window{
+  border-bottom:1px solid gray;
+}
+
 body {
   margin: 0;
   background-color:rgb(10,10,10);
@@ -40,11 +56,9 @@ body {
 
 .key-segment{
   border-left:1px solid gray;
-  border-right:1px solid gray;
 }
 
 .preview-window{
   margin-top:auto;
-  border-top:1px solid gray;
 
 }
