@@ -14,6 +14,10 @@ resetcol = false;
 clicked_lm=0;
 mpos={x:0,y:0}
 
+layers = [];
+
+selected_layer = 0;
+
 $("body").mousemove(function(e) {
 	    mpos.x = e.pageX
 	   	mpos.y = e.pageY
@@ -48,13 +52,33 @@ var main=function(){
 
 	});
 
+	$('.newlayerbut').click(function(){
+		layers.push({grid:[],name:"Layer "+layers.length,settings:{}})
 
+		render_layer_UI();
+	})
 
 	loop();
 }
 
 function sort_by_date(a,b){
 	return b.date-a.date
+}
+
+function render_layer_UI(){
+	str = ""
+	for (var i=0; i<layers.length; i++)
+	{
+		tl = layers[i];
+		str+= "<div class='layer'><h3>"+tl.name+"</h3><div class='tinybut deletebut' style='margin-left:auto'><span class='icon-bin'></span></div> <div class='tinybut movedownbut'><span class='icon-menu3'></span></div><div class='tinybut moveupbut'><span class='icon-menu4'></span></div></div>"
+	}
+
+	$('.layerbox').html(str);
+
+}
+
+function SVG(tag) {
+    return document.createElementNS('http://www.w3.org/2000/svg', tag);
 }
 
 function loop(){
