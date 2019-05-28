@@ -24,8 +24,12 @@ colors = []
 colors[0] = "gray";
 colors[1] = "white";
 paint_color = 1;
+selected_hue = 0;
+selected_col = hslToRgb(selected_hue,.5,.5)
 
 hovering_twod_canv=false;
+hovering_cp_canv=false;
+hovering_preview_canv=false;
 
 var theta_x = -5;
 var theta_y = -135;
@@ -34,9 +38,9 @@ var theta_z = -160;
 var offset_pan_x=0;
 var offset_pan_y=0;
 
-var offset_trans_x=-100;
-var offset_trans_y=-100;
-var crude_zoom_factor = 20;
+var offset_trans_x=-200;
+var offset_trans_y=-300;
+var crude_zoom_factor = 10;
 
 $("body").mousemove(function(e) {
 	    mpos.x = e.pageX
@@ -55,10 +59,17 @@ $("body").mousemove(function(e) {
     {
         ctx_p = preview.getContext('2d');
     }
+
     var twod_canvas = document.getElementById('canvas-2d');
     if (twod_canvas.getContext)
     {
         ctx_paint = twod_canvas.getContext('2d');
+    }
+
+    var colorp = document.getElementById('canvas-colorp');
+    if (colorp.getContext)
+    {
+        ctx_cp = colorp.getContext('2d');
     }
 
 document.body.addEventListener('mousedown', function(){
@@ -89,6 +100,34 @@ var main=function(){
 		}
 
 		render_layer_UI();
+	})
+
+	$('#canvas-2d').mouseenter(function(){
+		hovering_twod_canv=true;
+
+	})
+	$('#canvas-2d').mouseleave(function(){
+		hovering_twod_canv=false;
+	})
+
+	$('#canvas-colorp').mouseenter(function(){
+		hovering_cp_canv=true;
+	})
+	$('#canvas-colorp').mouseleave(function(){
+		hovering_cp_canv=false;
+	})
+
+	$('#preview').mouseenter(function(){
+		hovering_preview_canv=true;
+
+	})
+	$('#preview').mouseleave(function(){
+		hovering_preview_canv=false;
+	})
+
+	$('.newcolorbut').click(function(){
+		colors.push("rgb("+Math.round(selected_col.r)+","+Math.round(selected_col.g)+","+Math.round(selected_col.b)+")")
+		render_color_UI();
 	})
 
 	loop();
@@ -124,12 +163,27 @@ function render_layer_UI(){
 		$('.layer').removeClass("selected")
 		$(this).addClass("selected")
 	})
+}
 
-	$('#canvas-2d').mouseenter(function(){
-		hovering_twod_canv=true;
-	})
-	$('#canvas-2d').mouseleave(function(){
-		hovering_twod_canv=false;
+function render_color_UI(){
+	str = ""
+	for (var i=0; i<colors.length; i++)
+	{
+		col = colors[i];
+		str+="<div class='tinybut colorbut' id="+i+" type="+JSON.stringify(colors[i])+" style='background-color:"+col+"'></div>";
+
+	}
+
+	$('.pallettebox').html(str);
+
+	$('.colorbut').click(function(){
+		$(".colorbut").removeClass("colorbut-selected")
+		$(this).addClass("colorbut-selected");
+
+		id = $(this).attr("id");
+		id = parseInt(id);
+
+		paint_color=id;
 	})
 }
 
@@ -138,6 +192,7 @@ function SVG(tag) {
 }
 
 function loop(){
+	mpos_cp = {x:mpos.x-$('#canvas-colorp').offset().left,y:mpos.y-$('#canvas-colorp').offset().top}
 	//dragging
 	if (clicked_lm==1)
 	{
@@ -147,19 +202,34 @@ function loop(){
 		drag.start.x=mpos.x;
 		drag.start.y=mpos.y;
 
-		drag.pos_start.x=mpos_paint.x;
-		drag.pos_start.y=mpos_paint.y;
+		drag.pos_start.x=theta_z
+		drag.pos_start.y=theta_x
 
 		clicked_lm=2;
+
+		dis = point_distance({x:colorp.width/2,y:colorp.height/2},mpos_cp)
+		if (hovering_cp_canv && dis>base_r)
+		{
+			dir = (-point_direction({x:colorp.width/2,y:colorp.height/2},mpos_cp)+360)%360
+			selected_hue = dir/360
+		}
+
+		if (hovering_cp_canv && Math.abs(mpos_cp.x-center_x)<span/2 && Math.abs(mpos_cp.y-center_y)<span/2)
+		{
+			x = (mpos_cp.x - cp_start_x)/(span);
+			y = (mpos_cp.y - cp_start_y)/(span);
+			selected_col = hslToRgb(selected_hue,x,y)
+		}
 	}
 
 	if (clicked_lm==2)
 	{
-		if (drag.mode==1)
+		//re-orient preview
+		if (drag.mode==1 && hovering_preview_canv)
 		{
 
-			// offset_trans_x = (mpos.x-drag.start.x)
-			// offset_trans_y = (mpos.y-drag.start.y)
+			theta_z = ((mpos.x-drag.start.x)/100)+drag.pos_start.x
+			theta_x = ((mpos.y-drag.start.y)/100)+drag.pos_start.y
 		}
 
 		//paint
@@ -292,6 +362,62 @@ function loop(){
 			ctx_p.fill();
 		}
 
+	//draw color wheel
+		ctx_cp.clearRect(0,0,colorp.width,colorp.height);
+		ctx_cp.fillStyle="black"
+		ctx_cp.fillRect(0,0,colorp.width,colorp.height)
+
+		center_x = colorp.width/2;
+		center_y = colorp.height/2;
+		for (var i=0; i<90; i++)
+		{
+			base_r = 90;
+			ctx_cp.beginPath()
+			ld1 = lengthdir(base_r,i*4)
+			ld2 = lengthdir(base_r+20,i*4)
+			ld3 = lengthdir(base_r+20,(i+1.2)*4)
+			ld4 = lengthdir(base_r,(i+1.2)*4)
+			col = hslToRgb((i/90),.5,.5)
+
+			ctx_cp.fillStyle="rgb("+col.r+","+col.g+","+col.b+")";
+			
+			ctx_cp.moveTo(ld1.x+center_x,ld1.y+center_y)
+			ctx_cp.lineTo(ld2.x+center_x,ld2.y+center_y)
+			ctx_cp.lineTo(ld3.x+center_x,ld3.y+center_y)
+			ctx_cp.lineTo(ld4.x+center_x,ld4.y+center_y)
+			ctx_cp.closePath();
+			ctx_cp.fill();
+		}
+
+		//color grid
+		ld = lengthdir(base_r-5,135);
+		ld_2 = lengthdir(base_r-5,45);
+		span = Math.abs(ld.x-ld_2.x)
+		cp_start_x = ld.x + center_x;
+		cp_start_y = ld.y + center_y;
+		cp_grid_res = 20
+		for (var xx=0; xx<cp_grid_res; xx++)
+		{
+			for (var yy=0; yy<cp_grid_res; yy++)
+			{
+				x = span*(xx/cp_grid_res)+cp_start_x;
+				y = span*(yy/cp_grid_res)+cp_start_y;
+				x-=.5
+				y-=.5
+
+				size = span/cp_grid_res;
+				col = hslToRgb(selected_hue,(xx/cp_grid_res),(yy/cp_grid_res))
+				ctx_cp.fillStyle="rgb("+col.r+","+col.g+","+col.b+")";
+
+				ctx_cp.fillRect(x,y,size*1.4,size*1.4);
+			}
+		}
+
+		//color spot
+		ctx_cp.fillStyle="rgb("+selected_col.r+","+selected_col.g+","+selected_col.b+")";
+		ctx_cp.fillRect(0,colorp.height-50,50,50)
+
+
 	requestAnimationFrame(loop);
 }
 
@@ -340,6 +466,10 @@ function resizeDiv() {
 		w = $(this).parent().width();
 		$(this).css({height:w+"px"})
 	})
+
+	colorp.width = $('#canvas-colorp').parent().width()
+	colorp.height = $('#canvas-colorp').parent().height()-30
+
 
 	main_width = $('.mainsection').width();
 	twod_canvas.width = Math.min(vph*.75,main_width);

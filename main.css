@@ -135,6 +135,9 @@ input{
   color:white;
 }
 
+.colorbut-selected{
+  border:2px solid blue;
+}
 
 @font-face {
   font-family: 'icomoon';
