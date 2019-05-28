@@ -25,6 +25,18 @@ colors[0] = "gray";
 colors[1] = "white";
 paint_color = 1;
 
+hovering_twod_canv=false;
+
+var theta_x = -5;
+var theta_y = -135;
+var theta_z = -160;
+
+var offset_pan_x=0;
+var offset_pan_y=0;
+
+var offset_trans_x=-100;
+var offset_trans_y=-100;
+var crude_zoom_factor = 20;
 
 $("body").mousemove(function(e) {
 	    mpos.x = e.pageX
@@ -112,6 +124,13 @@ function render_layer_UI(){
 		$('.layer').removeClass("selected")
 		$(this).addClass("selected")
 	})
+
+	$('#canvas-2d').mouseenter(function(){
+		hovering_twod_canv=true;
+	})
+	$('#canvas-2d').mouseleave(function(){
+		hovering_twod_canv=false;
+	})
 }
 
 function SVG(tag) {
@@ -139,20 +158,23 @@ function loop(){
 		if (drag.mode==1)
 		{
 
-			new_pos_x = (mpos.x-drag.start.x)
-			new_pos_y = (mpos.y-drag.start.y)
+			// offset_trans_x = (mpos.x-drag.start.x)
+			// offset_trans_y = (mpos.y-drag.start.y)
 		}
 
 		//paint
-		for (var l=0; l<layers.length; l++)
+		if (hovering_twod_canv)
 		{
-			tl = layers[l];
-			if (layers[l].selected)
-			{
-				if (tl.grid[mouse_cell.x] && tl.grid[mouse_cell.x][mouse_cell.y])
-				tl.grid[mouse_cell.x][mouse_cell.y]=paint_color;
+			for (var l=0; l<layers.length; l++)
+				{
+					tl = layers[l];
+					if (layers[l].selected)
+					{
+						if (tl.grid[mouse_cell.x] && tl.grid[mouse_cell.x][mouse_cell.y])
+						tl.grid[mouse_cell.x][mouse_cell.y]=paint_color;
+					}
+				}
 			}
-		}
 	}
 	
 	if (clicked_lm==3)
@@ -214,6 +236,62 @@ function loop(){
 			ctx_paint.stroke();
 		}
 
+	//draw 3D stuff.
+		ctx_p.clearRect(0,0,preview.width,preview.height);
+		ctx_p.fillStyle = "black";
+		ctx_p.fillRect(0,0,preview.width,preview.height);
+
+		unt_face_buffer = [];
+		for (var l=0; l<layers.length; l++)
+		{
+			tl = layers[l];
+			for (var xx=0; xx<res; xx++)
+			{
+				for (var yy=0; yy<res; yy++)
+				{
+					if (tl.grid[xx][yy]!=-1)
+					{
+						def = colors[tl.grid[xx][yy]]
+						cube = cube_tris(xx-(res/2)+offset_pan_x,yy-(res/2)+offset_pan_y,l)
+						for (var i=0; i<cube.length; i++)
+						{
+							unt_face_buffer.push({col:def,points:cube[i]})
+						}
+					}
+				}
+			}
+		}
+
+		trans_face_buffer=[]
+		//zxy
+		for (var i=0; i<unt_face_buffer.length; i++)
+		{
+			tt = unt_face_buffer[i];
+			tb = []
+			for (var ii=0; ii<tt.points.length; ii++)
+			{
+				var trans_1 = z_rotation(tt.points[ii][0],tt.points[ii][1],tt.points[ii][2],theta_z)
+				var trans_2 = x_rotation(trans_1.x,trans_1.y,trans_1.z,theta_x)
+				var final = y_rotation(trans_2.x,trans_2.y,trans_2.z,theta_y)
+				tb.push({x:final.x,y:final.y,z:final.z});
+			}
+			trans_face_buffer.push({verts:tb,col:tt.col});
+		}
+
+		face_buffer = trans_face_buffer.sort(sort_by_avg_depth)
+
+		for (var i=0; i<face_buffer.length; i++)
+		{
+			tfb= face_buffer[i].verts
+			ctx_p.fillStyle=face_buffer[i].col;
+			ctx_p.beginPath()
+			ctx_p.moveTo((tfb[0].x*crude_zoom_factor)-offset_trans_x,(tfb[0].y*crude_zoom_factor)-offset_trans_y)
+			ctx_p.lineTo((tfb[1].x*crude_zoom_factor)-offset_trans_x,(tfb[1].y*crude_zoom_factor)-offset_trans_y)
+			ctx_p.lineTo((tfb[2].x*crude_zoom_factor)-offset_trans_x,(tfb[2].y*crude_zoom_factor)-offset_trans_y)
+			ctx_p.closePath();
+			ctx_p.fill();
+		}
+
 	requestAnimationFrame(loop);
 }
 
@@ -235,6 +313,14 @@ function detectmob() {
 
 window.onresize = function(event) {
 resizeDiv();
+}
+
+function sort_by_avg_depth(a,b)
+{
+	depth_a = (a.verts[0].z+a.verts[1].z+a.verts[2].z)/3
+	depth_b = (b.verts[0].z+b.verts[1].z+b.verts[2].z)/3
+
+	return depth_a-depth_b;
 }
 
 
@@ -284,6 +370,39 @@ function hslToRgb(h, s, l){
     }
 
     return {r:Math.round(r * 255), g:Math.round(g * 255), b:Math.round(b * 255)};
+}
+
+function cube_tris(x,y,z)
+{
+var verts = [[],
+	[x+0,y+0,z+0],
+	[x+0,y+1,z+0],
+	[x+1,y+0,z+0],
+	[x+1,y+1,z+0],
+	[x+1,y+0,z+1],
+	[x+1,y+1,z+1],
+	[x+0,y+0,z+1],
+	[x+0,y+1,z+1]]
+
+var tris = [[verts[1],verts[2],verts[4]],
+	[verts[3],verts[4],verts[6]],
+	[verts[5],verts[6],verts[8]],
+	[verts[7],verts[8],verts[2]],
+	[verts[2],verts[8],verts[6]],
+	[verts[7],verts[1],verts[3]],
+	[verts[1],verts[4],verts[3]],
+	[verts[3],verts[6],verts[5]],
+	[verts[5],verts[8],verts[7]],
+	[verts[7],verts[2],verts[1]],
+	[verts[2],verts[6],verts[4]],
+	[verts[7],verts[3],verts[5]]
+	]
+
+//compute averages for real depth sorting
+
+//compute normals in the future for backface culling
+
+return tris;
 }
 
 $(document).ready(main)
