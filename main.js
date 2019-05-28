@@ -17,6 +17,7 @@ mpos={x:0,y:0}
 layers = [];
 
 selected_layer = 0;
+res = 32;
 
 $("body").mousemove(function(e) {
 	    mpos.x = e.pageX
@@ -34,6 +35,11 @@ $("body").mousemove(function(e) {
     if (preview.getContext)
     {
         ctx_p = preview.getContext('2d');
+    }
+    var twod_canvas = document.getElementById('canvas-2d');
+    if (twod_canvas.getContext)
+    {
+        ctx_paint = twod_canvas.getContext('2d');
     }
 
 document.body.addEventListener('mousedown', function(){
@@ -70,11 +76,18 @@ function render_layer_UI(){
 	for (var i=0; i<layers.length; i++)
 	{
 		tl = layers[i];
-		str+= "<div class='layer'><h3>"+tl.name+"</h3><div class='tinybut deletebut' style='margin-left:auto'><span class='icon-bin'></span></div> <div class='tinybut movedownbut'><span class='icon-menu3'></span></div><div class='tinybut moveupbut'><span class='icon-menu4'></span></div></div>"
+		str+= "<div class='layer' id="+i+"><h3>"+tl.name+"</h3><div class='tinybut deletebut' style='margin-left:auto'><span class='icon-bin'></span></div> <div class='tinybut movedownbut'><span class='icon-menu3'></span></div><div class='tinybut moveupbut'><span class='icon-menu4'></span></div></div>"
 	}
 
 	$('.layerbox').html(str);
 
+	$('.layer').click(function(){
+		tgt = $(this).attr("id");
+		selected_layer = parseInt(tgt);
+
+		$('.layer').removeClass("selected")
+		$(this).addClass("selected")
+	})
 }
 
 function SVG(tag) {
@@ -82,10 +95,10 @@ function SVG(tag) {
 }
 
 function loop(){
-		//dragging
+	//dragging
 	if (clicked_lm==1)
 	{
-		cur_pos = {x:parseFloat($('.subimgholder').css("left")),y:parseFloat($('.subimgholder').css("top"))}
+		// cur_pos = {x:parseFloat($('.subimgholder').css("left")),y:parseFloat($('.subimgholder').css("top"))}
 		drag.mode=1;
 
 		drag.start.x=mpos.x;
@@ -111,6 +124,29 @@ function loop(){
 	{
 		drag_mode=0;
 	}
+
+	ctx_paint.clearRect(0,0,twod_canvas.width,twod_canvas.height);
+	ctx_paint.fillStyle="black";
+	ctx_paint.fillRect(0,0,twod_canvas.width,twod_canvas.height);
+
+	//draw grid
+		ctx_paint.strokeStyle="gray";
+
+		for (var i=0; i<res+1; i++)
+		{
+			ctx_paint.beginPath()
+			ctx_paint.moveTo((i/res)*twod_canvas.width,0)
+			ctx_paint.lineTo((i/res)*twod_canvas.width,twod_canvas.height)
+			ctx_paint.stroke();
+		}
+
+		for (var i=0; i<res+1; i++)
+		{
+			ctx_paint.beginPath()
+			ctx_paint.moveTo(0,(i/res)*twod_canvas.height)
+			ctx_paint.lineTo(twod_canvas.width,(i/res)*twod_canvas.height)
+			ctx_paint.stroke();
+		}
 
 	requestAnimationFrame(loop);
 }
@@ -152,6 +188,10 @@ function resizeDiv() {
 		w = $(this).parent().width();
 		$(this).css({height:w+"px"})
 	})
+
+	main_width = $('.mainsection').width();
+	twod_canvas.width = Math.min(vph*.75,main_width);
+	twod_canvas.height = Math.min(vph*.75,main_width);
 }
 
 

@@ -80,12 +80,11 @@ body {
 }
 
 .layerbox{
-  display:flex;
   justify-content: flex-start;
   align-items:flex-start;
   flex-direction: column;
-  flex-wrap:wrap;
-  height:calc(100% - 24px);
+  height:calc(100% - 28px);
+  overflow-y:scroll;
 }
 
 .layer{
@@ -94,11 +93,47 @@ body {
   align-items: center;
   border:1px solid gray;
   border-radius:4px; 
-  width: 49%;
+  width: calc(100% - 10px);
   padding-left:5px;
   margin:2px;
+  transition: .3s;
+  background-color:rgba(255,255,255,0);
 }
 
+.layer:hover{
+  background-color:rgba(255,255,255,.2);
+}
+
+.layer.selected{
+  background-color:rgba(255,255,255,.4);
+}
+
+.layer h3{
+  font-size:.8em;
+}
+
+.layer .tinybut{
+  font-size: .5em;
+  height:15px;
+  width:15px;
+}
+
+.inpline h4{
+  margin-left:10px;
+}
+
+.inpline{
+  display:flex;
+  justify-content: space-between;
+  margin-top:2px;
+}
+
+input{
+  background-color:rgba(0,0,0,0);
+  border:1px solid gray;
+  border-radius: 2px;
+  color:white;
+}
 
 
 @font-face {
