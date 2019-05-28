@@ -130,6 +130,10 @@ var main=function(){
 		render_color_UI();
 	})
 
+	$('.toolbut').click(function(){
+		tool = parseInt($(this).attr("id"));
+	})
+
 	loop();
 }
 
@@ -167,11 +171,11 @@ function render_layer_UI(){
 
 function render_color_UI(){
 	str = ""
-	for (var i=0; i<colors.length; i++)
+	str+="<div class='tinybut colorbut' id=-1 style='background-color:black'></div>";
+	for (var i=1; i<colors.length; i++)
 	{
 		col = colors[i];
 		str+="<div class='tinybut colorbut' id="+i+" type="+JSON.stringify(colors[i])+" style='background-color:"+col+"'></div>";
-
 	}
 
 	$('.pallettebox').html(str);
@@ -240,8 +244,23 @@ function loop(){
 					tl = layers[l];
 					if (layers[l].selected)
 					{
-						if (tl.grid[mouse_cell.x] && tl.grid[mouse_cell.x][mouse_cell.y])
-						tl.grid[mouse_cell.x][mouse_cell.y]=paint_color;
+						if (tool==0)
+						{
+							if (tl.grid[mouse_cell.x] && tl.grid[mouse_cell.x][mouse_cell.y])
+							{
+								console.log("painting")
+								tl.grid[mouse_cell.x][mouse_cell.y]=paint_color;
+							}
+						}
+						if (tool==1)
+						{
+							if (tl.grid[mouse_cell.x] && tl.grid[mouse_cell.x][mouse_cell.y])
+							tl.grid[mouse_cell.x][mouse_cell.y]=-1;
+						}
+						if (tool==2)
+						{
+
+						}
 					}
 				}
 			}
