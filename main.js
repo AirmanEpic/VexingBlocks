@@ -259,7 +259,13 @@ function loop(){
 						}
 						if (tool==2)
 						{
-
+							//flood fill
+							to_be_filled = copy(tl.grid);
+							out = flood_fill(to_be_filled,mouse_cell)
+							for (var i=0; i<out.length;i++)
+							{
+								tl.grid[out[i].x][out[i].y]=paint_color;
+							}
 						}
 					}
 				}
@@ -553,6 +559,54 @@ var tris = [[verts[1],verts[2],verts[4]],
 
 return tris;
 }
+
+function flood_fill(cell_set,start){
+	//NOTE! Valid cells must be 1 in order for this to work. Invalid cells will be marked 0.
+	to_eval = [];
+	to_eval.push(start);
+
+	cells = copy(cell_set);
+
+	var in_shape = [];
+
+	//flood fill on that cell
+	if (1==1)
+	{	
+		do 
+		{
+			if (cells[to_eval[0].x][to_eval[0].y+1]==-1)
+			{
+				to_eval.push({x:to_eval[0].x,y:to_eval[0].y+1})
+				cells[to_eval[0].x][to_eval[0].y+1]=1;
+			}
+
+			if (cells[to_eval[0].x][to_eval[0].y-1]==-1)
+			{
+				to_eval.push({x:to_eval[0].x,y:to_eval[0].y-1})
+				cells[to_eval[0].x][to_eval[0].y-1]=1
+			}
+
+			if (cells[to_eval[0].x+1] && cells[to_eval[0].x+1][to_eval[0].y]==-1)
+			{
+				to_eval.push({x:to_eval[0].x+1,y:to_eval[0].y})
+				cells[to_eval[0].x+1][to_eval[0].y]=1
+			}
+
+			if (cells[to_eval[0].x-1] && cells[to_eval[0].x-1][to_eval[0].y]==-1)
+			{
+				to_eval.push({x:to_eval[0].x-1,y:to_eval[0].y})
+				cells[to_eval[0].x-1][to_eval[0].y]=1
+			}
+
+			in_shape.push({x:to_eval[0].x,y:to_eval[0].y})
+			to_eval.splice(0,1);
+		}
+		while (to_eval.length!=0)
+	}
+
+	return in_shape;
+}
+
 
 $(document).ready(main)
 $(document).ready(resizeDiv)
