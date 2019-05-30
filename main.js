@@ -47,6 +47,8 @@ $("body").mousemove(function(e) {
 	   	mpos.y = e.pageY
 	})
 
+var unt_face_buffer=[];
+
 //boilerplate canvas code
 	// var canvas = document.getElementById('canvas');
  //    if (canvas.getContext)
@@ -270,6 +272,8 @@ function loop(){
 					}
 				}
 			}
+
+			generate_face_buffer()
 	}
 	
 	if (clicked_lm==3)
@@ -336,27 +340,6 @@ function loop(){
 		ctx_p.fillStyle = "black";
 		ctx_p.fillRect(0,0,preview.width,preview.height);
 
-		unt_face_buffer = [];
-		for (var l=0; l<layers.length; l++)
-		{
-			tl = layers[l];
-			for (var xx=0; xx<res; xx++)
-			{
-				for (var yy=0; yy<res; yy++)
-				{
-					if (tl.grid[xx][yy]!=-1)
-					{
-						def = colors[tl.grid[xx][yy]]
-						cube = cube_tris(xx-(res/2)+offset_pan_x,yy-(res/2)+offset_pan_y,l)
-						for (var i=0; i<cube.length; i++)
-						{
-							unt_face_buffer.push({col:def,points:cube[i]})
-						}
-					}
-				}
-			}
-		}
-
 		trans_face_buffer=[]
 		//zxy
 		for (var i=0; i<unt_face_buffer.length; i++)
@@ -375,6 +358,22 @@ function loop(){
 
 		face_buffer = trans_face_buffer.sort(sort_by_avg_depth)
 
+		//add culling
+
+		//triangles
+		// for (var i=0; i<face_buffer.length; i++)
+		// {
+		// 	tfb= face_buffer[i].verts
+		// 	ctx_p.fillStyle=face_buffer[i].col;
+		// 	ctx_p.beginPath()
+		// 	ctx_p.moveTo((tfb[0].x*crude_zoom_factor)-offset_trans_x,(tfb[0].y*crude_zoom_factor)-offset_trans_y)
+		// 	ctx_p.lineTo((tfb[1].x*crude_zoom_factor)-offset_trans_x,(tfb[1].y*crude_zoom_factor)-offset_trans_y)
+		// 	ctx_p.lineTo((tfb[2].x*crude_zoom_factor)-offset_trans_x,(tfb[2].y*crude_zoom_factor)-offset_trans_y)
+		// 	ctx_p.closePath();
+		// 	ctx_p.fill();
+		// }
+
+		//quads
 		for (var i=0; i<face_buffer.length; i++)
 		{
 			tfb= face_buffer[i].verts
@@ -383,9 +382,12 @@ function loop(){
 			ctx_p.moveTo((tfb[0].x*crude_zoom_factor)-offset_trans_x,(tfb[0].y*crude_zoom_factor)-offset_trans_y)
 			ctx_p.lineTo((tfb[1].x*crude_zoom_factor)-offset_trans_x,(tfb[1].y*crude_zoom_factor)-offset_trans_y)
 			ctx_p.lineTo((tfb[2].x*crude_zoom_factor)-offset_trans_x,(tfb[2].y*crude_zoom_factor)-offset_trans_y)
+			ctx_p.lineTo((tfb[3].x*crude_zoom_factor)-offset_trans_x,(tfb[3].y*crude_zoom_factor)-offset_trans_y)
 			ctx_p.closePath();
 			ctx_p.fill();
 		}
+
+		ctx_p.fillText(face_buffer.length,0,10)
 
 	//draw color wheel
 		ctx_cp.clearRect(0,0,colorp.width,colorp.height);
@@ -446,6 +448,96 @@ function loop(){
 	requestAnimationFrame(loop);
 }
 
+function generate_face_buffer(){
+	unt_face_buffer = [];
+	for (var l=0; l<layers.length; l++)
+	{
+		tl = layers[l];
+		for (var xx=0; xx<res; xx++)
+		{
+			for (var yy=0; yy<res; yy++)
+			{
+				if (tl.grid[xx][yy]!=-1)
+				{
+					def = colors[tl.grid[xx][yy]]
+					cube = cube_quads(xx-(res/2)+offset_pan_x,yy-(res/2)+offset_pan_y,l)
+					for (var i=0; i<cube.length; i++)
+					{
+						unt_face_buffer.push({col:def,points:cube[i]})
+					}
+				}
+			}
+		}
+	}
+
+	face_buckets = {}
+	//face matching
+		for (var i=0; i<unt_face_buffer.length; i++)
+		{
+			my_hash = hash_face(unt_face_buffer[i]);
+			if (!face_buckets[my_hash])
+			{
+				face_buckets[my_hash]=[i]
+			}
+			else
+			{
+				face_buckets[my_hash].push(i);
+
+				for (var ii=0; ii<face_buckets[my_hash].length; ii++)
+				{
+					id = face_buckets[my_hash][ii]
+					unt_face_buffer[id].delete=true;
+				}
+			}
+			//debugger;
+		}
+
+		for (var i=0; i<unt_face_buffer.length; i++)
+		{
+			if (unt_face_buffer[i].delete)
+			{
+				unt_face_buffer.splice(i,1)
+				i--;
+			}
+		}
+
+}
+
+function hash_face_carats(face){
+	val= ((face.points[0][0]+face.points[0][1]+face.points[0][2])+(face.points[1][0]+face.points[1][1]+face.points[1][2])+(face.points[2][0]+face.points[2][1]+face.points[2][2]))
+	return "F"+val;
+}
+
+function hash_face_xyz(face){
+	valx=face.points[0][0]+face.points[1][0]+face.points[2][0]
+	valy=face.points[0][1]+face.points[1][1]+face.points[2][1]
+	valz=face.points[0][2]+face.points[1][2]+face.points[2][2]
+
+	return "F"+valx+","+valy+","+valz;
+}
+
+function hash_face_tris(face){
+	sort_value_1 = face.points[0][0]+face.points[0][1]+face.points[0][2]
+	sort_value_2 = face.points[1][0]+face.points[1][1]+face.points[1][2]
+	sort_value_3 = face.points[2][0]+face.points[2][1]+face.points[2][2]
+	values = [{id:0,sort_value:sort_value_1},{id:1,sort_value:sort_value_2},{id:2,sort_value:sort_value_3}]	
+	values.sort(sort_by_sort_val)
+	console.log(JSON.stringify(face.points[values[0].id]))
+	val = JSON.stringify(face.points[values[0].id])+JSON.stringify(face.points[values[1].id])+JSON.stringify(face.points[values[2].id])
+	return "F"+val;
+}
+
+function hash_face(face){
+	sort_value_1 = face.points[0][0]+face.points[0][1]+face.points[0][2]
+	sort_value_2 = face.points[1][0]+face.points[1][1]+face.points[1][2]
+	sort_value_3 = face.points[2][0]+face.points[2][1]+face.points[2][2]
+	values = [{id:0,sort_value:sort_value_1},{id:1,sort_value:sort_value_2},{id:2,sort_value:sort_value_3}]	
+	values.sort(sort_by_sort_val)
+	console.log(JSON.stringify(face.points[values[0].id]))
+	val = JSON.stringify(face.points[values[0].id])+JSON.stringify(face.points[values[1].id])+JSON.stringify(face.points[values[2].id])
+	return "F"+val;
+}
+
 function detectmob() { 
  if( navigator.userAgent.match(/Android/i)
  || navigator.userAgent.match(/webOS/i)
@@ -472,6 +564,10 @@ function sort_by_avg_depth(a,b)
 	depth_b = (b.verts[0].z+b.verts[1].z+b.verts[2].z)/3
 
 	return depth_a-depth_b;
+}
+
+function sort_by_sort_val(a,b){
+	return a.sort_value-b.sort_value;
 }
 
 
@@ -560,10 +656,39 @@ var tris = [[verts[1],verts[2],verts[4]],
 return tris;
 }
 
+function cube_quads(x,y,z)
+{
+var verts = [[],
+[x+0,y+0,z+0],
+[x+0,y+1,z+0],
+[x+1,y+0,z+0],
+[x+1,y+1,z+0],
+[x+1,y+0,z+1],
+[x+1,y+1,z+1],
+[x+0,y+0,z+1],
+[x+0,y+1,z+1]]
+
+var tris = [
+[verts[3],verts[1],verts[2],verts[4]],
+[verts[5],verts[3],verts[4],verts[6]],
+[verts[7],verts[5],verts[6],verts[8]],
+[verts[1],verts[7],verts[8],verts[2]],
+[verts[4],verts[2],verts[8],verts[6]],
+[verts[5],verts[7],verts[1],verts[3]]]
+
+//compute averages for real depth sorting
+
+//compute normals in the future for backface culling
+
+return tris;
+}
+
 function flood_fill(cell_set,start){
 	//NOTE! Valid cells must be 1 in order for this to work. Invalid cells will be marked 0.
 	to_eval = [];
 	to_eval.push(start);
+
+	start_col = cell_set[start.x][start.y]
 
 	cells = copy(cell_set);
 
@@ -574,28 +699,28 @@ function flood_fill(cell_set,start){
 	{	
 		do 
 		{
-			if (cells[to_eval[0].x][to_eval[0].y+1]==-1)
+			if (cells[to_eval[0].x][to_eval[0].y+1]==start_col)
 			{
 				to_eval.push({x:to_eval[0].x,y:to_eval[0].y+1})
-				cells[to_eval[0].x][to_eval[0].y+1]=1;
+				cells[to_eval[0].x][to_eval[0].y+1]=start_col+2;
 			}
 
-			if (cells[to_eval[0].x][to_eval[0].y-1]==-1)
+			if (cells[to_eval[0].x][to_eval[0].y-1]==start_col)
 			{
 				to_eval.push({x:to_eval[0].x,y:to_eval[0].y-1})
-				cells[to_eval[0].x][to_eval[0].y-1]=1
+				cells[to_eval[0].x][to_eval[0].y-1]=start_col+2
 			}
 
-			if (cells[to_eval[0].x+1] && cells[to_eval[0].x+1][to_eval[0].y]==-1)
+			if (cells[to_eval[0].x+1] && cells[to_eval[0].x+1][to_eval[0].y]==start_col)
 			{
 				to_eval.push({x:to_eval[0].x+1,y:to_eval[0].y})
-				cells[to_eval[0].x+1][to_eval[0].y]=1
+				cells[to_eval[0].x+1][to_eval[0].y]=start_col+2
 			}
 
-			if (cells[to_eval[0].x-1] && cells[to_eval[0].x-1][to_eval[0].y]==-1)
+			if (cells[to_eval[0].x-1] && cells[to_eval[0].x-1][to_eval[0].y]==start_col)
 			{
 				to_eval.push({x:to_eval[0].x-1,y:to_eval[0].y})
-				cells[to_eval[0].x-1][to_eval[0].y]=1
+				cells[to_eval[0].x-1][to_eval[0].y]=start_col+2
 			}
 
 			in_shape.push({x:to_eval[0].x,y:to_eval[0].y})
